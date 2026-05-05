@@ -1,4 +1,4 @@
-const BASE = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const BASE = process.env.REACT_APP_API_URL || "http://192.168.1.5:5000/api";
 
 /* ── Token helpers — exported so useAuth can import them ── */
 export const getToken   = ()  => localStorage.getItem("cocopi_token");

@@ -623,10 +623,24 @@ section, footer {
   display: block; padding: 0.8rem 2rem;
   transition: color .3s;
 }
-.mobile-drawer nav a:hover { color: var(--gold); }
+.mobile-drawer nav button { background: none;
+  border: none;
+  padding: 0;
+  color:var(--gold);
+  font-family: var(--ff-mono);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left; /* Critical for buttons in a list */
+  width: auto;
+}
 .mobile-drawer-tagline {
   font-family: var(--ff-curs); font-size: 1.4rem;
   color: rgba(255,255,255,.35); margin-top: 1rem;
+}
+.usersname{
+  font-family: var(--ff-curs); font-size: 1.5rem;
+  color: rgb(255, 255, 255);
 }
 
 /* ═══════════════════════════════════════════

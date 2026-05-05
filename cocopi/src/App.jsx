@@ -448,7 +448,7 @@ function Nav({ navigate = () => {}, cart = [] }) {
           <span className="mobile-drawer-brand">COCOPI</span>
           {user && (
             <span className="mobile-drawer-user">
-              Signed in as {user.name.split(" ")[0]}
+              Signed in as &nbsp;"<span className="usersname">{user.name.split(" ")[0]}</span>"
             </span>
           )}
           <nav aria-label="Mobile navigation">
