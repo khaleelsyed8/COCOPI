@@ -1,0 +1,5 @@
+.env
+cocopi/node_modules/
+server/node_modules/
+server/.env
+cocopi/.env
