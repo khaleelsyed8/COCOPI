@@ -7,6 +7,7 @@ import CartPage from "./CartPage";
 import CheckoutPage from "./CheckoutPage";
 import {api} from "./api";
 import { useAuth } from "./useAuth";
+import AdminPage from "./AdminPage";
 
 /* ─────────────────────────────────────────
    VIDEO BACKGROUND
@@ -405,6 +406,10 @@ function Nav({ navigate = () => {}, cart = [] }) {
                   <span className="nav-user-dropdown-email">{user.email}</span>
                 </div>
                 <div className="nav-user-dropdown-divider" />
+                <button className="nav-user-dropdown-item"
+                  onClick={() => { setUserMenu(false); navigate("admin"); }}>
+                  Dashboard
+                </button>
                 <button className="nav-user-dropdown-item"
                   onClick={() => { setUserMenu(false); navigate("orders"); }}>
                   My Orders
@@ -1184,6 +1189,13 @@ export default function App() {
   const [ready,    setReady]   = useState(false);
   const [page,     setPage]    = useState("home"); // "home" | "auth" | "cart" | "checkout"
   const [cart,     setCart]    = useState([]);
+  const { user } = useAuth();
+
+useEffect(() => {
+  if (user?.role === "admin") {
+    setPage("admin");
+  }
+}, [user]);
 
   const handleDone = useCallback(() => setReady(true), []);
 
@@ -1236,6 +1248,8 @@ export default function App() {
         );
       case "checkout":
         return <CheckoutPage cart={cart} navigate={navigate} />;
+        case "admin":
+  return <AdminPage navigate={navigate} />;
       default:
         return (
           <MainContent

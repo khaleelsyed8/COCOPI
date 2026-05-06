@@ -19,7 +19,7 @@ const app = express();
 
 /* CORS — only allow requests from the React frontend */
 app.use(cors({
-  origin: process.env.CLIENT_URL || ["http://192.168.1.5:3000", "http://localhost:3000"],
+  origin: process.env.CLIENT_URL || "http://localhost:3000",
   credentials: true,
 }));
 
@@ -65,6 +65,7 @@ app.use("/api/auth/register", authLimiter);
 app.use("/api/auth",     require("./routes/auth"));
 app.use("/api/products", require("./routes/products"));
 app.use("/api/orders",   require("./routes/orders"));
+app.use("/api/admin",    require("./routes/admin"));
 
 /* ─────────────────────────────────────────
    HEALTH CHECK
@@ -104,7 +105,7 @@ app.use((err, req, res, next) => {
    START SERVER
 ───────────────────────────────────────── */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🍫 Cocopi server running on http://192.168.1.5:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`🍫  Cocopi server running on http://localhost:${PORT}`);
   console.log(`    Environment: ${process.env.NODE_ENV}`);
 });

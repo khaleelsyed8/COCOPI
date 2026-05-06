@@ -22,10 +22,18 @@ async function request(path, { method = "GET", body, auth = false } = {}) {
 }
 
 export const api = {
+  /* ── Generic methods (used by AdminPage) ── */
+  get:    (path)       => request(path, { auth: true }),
+  post:   (path, body) => request(path, { method: "POST",   body, auth: true }),
+  put:    (path, body) => request(path, { method: "PUT",    body, auth: true }),
+  patch:  (path, body) => request(path, { method: "PATCH",  body, auth: true }),
+  delete: (path)       => request(path, { method: "DELETE", auth: true }),
+
+  /* ── Scoped helpers (used by AuthPage, CheckoutPage) ── */
   auth: {
-    me:       ()                       => request("/auth/me",       { auth: true }),
-    login:    (email, password)        => request("/auth/login",    { method: "POST", body: { email, password } }),
-    register: (name, email, password)  => request("/auth/register", { method: "POST", body: { name, email, password } }),
+    me:       ()                      => request("/auth/me",       { auth: true }),
+    login:    (email, password)       => request("/auth/login",    { method: "POST", body: { email, password } }),
+    register: (name, email, password) => request("/auth/register", { method: "POST", body: { name, email, password } }),
   },
   products: {
     getAll: () => request("/products"),

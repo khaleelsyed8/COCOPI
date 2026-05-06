@@ -1119,14 +1119,15 @@ section, footer {
 .p-price  { font-family:var(--ff-curs); font-size:2.2rem; color:#1a1a1a; line-height: 0.8; }
 
 .p-cta {
-  font-size:.58rem; letter-spacing:.15em; text-transform:uppercase;
-  color: #1a1a1a; text-decoration:none;
+  font: var(--ff-mono); letter-spacing:.15em; text-transform:uppercase;
+  text-decoration:none;
   padding-bottom: 5px;
-  border-bottom: 2px solid var(--gold);
-  font-weight: bold;
+  border: none;
   transition: color .3s, border-color .3s;
+  background-color: transparent;
+  font-size: .8rem;
 }
-.p-cta:hover { color: var(--red); border-color: var(--red); }
+.p-cta:hover { color: var(--gold); border-color: var(--gold); font-weight: 700;}
 
 .p-card-tag {
   position: absolute; top: 2.5rem; right: -5px;
