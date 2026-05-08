@@ -67,7 +67,11 @@ exports.getOrders = async (req, res) => {
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(Number(limit))
-        .populate("user", "name email"),
+        .populate("user", "name email")
+        /* items.product gives us the live product record as fallback,
+           but we also snapshot name/price/img at order time so it's
+           always shown even if the product is later deleted */
+        .populate("items.product", "name img origin"),
       Order.countDocuments(filter),
     ]);
 

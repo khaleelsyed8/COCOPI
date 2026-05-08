@@ -1,45 +1,75 @@
-const BASE = process.env.REACT_APP_API_URL || "http://192.168.1.5:5000/api";
+/* ─────────────────────────────────────────
+   COCOPI API CLIENT
+   Supports both:
+     api.get("/products")            — used by AdminPage, AuthPage, CheckoutPage
+     api.products.getAll()           — used by Collections in App.jsx
+───────────────────────────────────────── */
 
-/* ── Token helpers — exported so useAuth can import them ── */
-export const getToken   = ()  => localStorage.getItem("cocopi_token");
-export const setToken   = (t) => localStorage.setItem("cocopi_token", t);
-export const clearToken = ()  => {
-  localStorage.removeItem("cocopi_token");
-  localStorage.removeItem("cocopi_user");
-};
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
-async function request(path, { method = "GET", body, auth = false } = {}) {
+/* ─ Token helpers ─ */
+export const getToken   = ()      => localStorage.getItem("cocopi_token");
+export const setToken   = (token) => localStorage.setItem("cocopi_token", token);
+export const clearToken = ()      => localStorage.removeItem("cocopi_token");
+
+/* ─ Core fetch ─ */
+async function request(method, path, body = null) {
   const headers = { "Content-Type": "application/json" };
-  if (auth) headers["Authorization"] = `Bearer ${getToken()}`;
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const config = { method, headers };
+  if (body) config.body = JSON.stringify(body);
+
+  const res  = await fetch(`${BASE_URL}${path}`, config);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Request failed");
+
+  if (!res.ok) {
+    const err = new Error(data.message || "Something went wrong.");
+    err.status = res.status;
+    err.data   = data;
+    throw err;
+  }
   return data;
 }
 
-export const api = {
-  /* ── Generic methods (used by AdminPage) ── */
-  get:    (path)       => request(path, { auth: true }),
-  post:   (path, body) => request(path, { method: "POST",   body, auth: true }),
-  put:    (path, body) => request(path, { method: "PUT",    body, auth: true }),
-  patch:  (path, body) => request(path, { method: "PATCH",  body, auth: true }),
-  delete: (path)       => request(path, { method: "DELETE", auth: true }),
+/* ─ Flat methods (used by AdminPage, AuthPage, CheckoutPage) ─ */
+const api = {
+  get:    (path)       => request("GET",    path),
+  post:   (path, body) => request("POST",   path, body),
+  put:    (path, body) => request("PUT",    path, body),
+  patch:  (path, body) => request("PATCH",  path, body),
+  delete: (path)       => request("DELETE", path),
 
-  /* ── Scoped helpers (used by AuthPage, CheckoutPage) ── */
-  auth: {
-    me:       ()                      => request("/auth/me",       { auth: true }),
-    login:    (email, password)       => request("/auth/login",    { method: "POST", body: { email, password } }),
-    register: (name, email, password) => request("/auth/register", { method: "POST", body: { name, email, password } }),
-  },
+  /* ─ Namespaced helpers (used by App.jsx Collections) ─ */
   products: {
-    getAll: () => request("/products"),
+    getAll:  ()       => request("GET",  "/products"),
+    getOne:  (id)     => request("GET",  `/products/${id}`),
+    create:  (body)   => request("POST", "/products",   body),
+    update:  (id, b)  => request("PUT",  `/products/${id}`, b),
+    remove:  (id)     => request("DELETE",`/products/${id}`),
+  },
+  auth: {
+    login:    (body)  => request("POST", "/auth/login",    body),
+    register: (body)  => request("POST", "/auth/register", body),
+    me:       ()      => request("GET",  "/auth/me"),
   },
   orders: {
-    create: (items, delivery) =>
-      request("/orders", { method: "POST", body: { items, delivery }, auth: true }),
+    place:   (body)   => request("POST", "/orders",      body),
+    mine:    ()       => request("GET",  "/orders/mine"),
+    getOne:  (id)     => request("GET",  `/orders/${id}`),
+  },
+  admin: {
+    overview:      ()         => request("GET",   "/admin/overview"),
+    orders:        (q)        => request("GET",   `/admin/orders${q||""}`),
+    updateOrder:   (id, body) => request("PATCH", `/admin/orders/${id}/status`, body),
+    products:      ()         => request("GET",   "/admin/products"),
+    createProduct: (body)     => request("POST",  "/admin/products",     body),
+    updateProduct: (id, body) => request("PUT",   `/admin/products/${id}`,body),
+    deleteProduct: (id)       => request("DELETE",`/admin/products/${id}`),
+    users:         ()         => request("GET",   "/admin/users"),
   },
 };
+
+export default api;
+export { api }; // Named export — supports: import {api} from "./api"

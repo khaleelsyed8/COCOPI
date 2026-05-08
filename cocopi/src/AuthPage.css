@@ -457,3 +457,103 @@
   .auth-left-badges { flex-direction: row; flex-wrap: wrap; }
   .auth-right { padding: 2.5rem 1.5rem; }
 }
+.auth-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.auth-input-wrap .auth-input {
+  width: 100%;
+  padding-right: 2.6rem;
+}
+.auth-eye-btn {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 2px;
+  transition: color .2s;
+}
+.auth-eye-btn:hover { color: var(--brown); }
+ 
+/* API error */
+.auth-api-error {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-left: 3px solid #ef4444;
+  color: #b91c1c;
+  font-size: .58rem;
+  letter-spacing: .06em;
+  line-height: 1.6;
+  padding: 0.65rem 0.9rem;
+  border-radius: 2px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+.auth-api-error.locked {
+  background: rgba(239,68,68,0.13);
+  border-left-color: #dc2626;
+}
+.auth-lock-icon { font-size: .8rem; flex-shrink: 0; }
+ 
+/* Strength meter — 5 segments */
+.auth-strength {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: -0.3rem;
+}
+.auth-strength-bars {
+  display: flex;
+  gap: 4px;
+}
+.auth-strength-seg {
+  flex: 1;
+  height: 3px;
+  background: rgba(96,70,59,0.12);
+  border-radius: 2px;
+  transition: background .3s;
+}
+.auth-strength-seg.filled.very-weak  { background: #ef4444; }
+.auth-strength-seg.filled.weak       { background: #f97316; }
+.auth-strength-seg.filled.fair       { background: #eab308; }
+.auth-strength-seg.filled.strong     { background: #22c55e; }
+.auth-strength-seg.filled.very-strong{ background: #16a34a; }
+ 
+.auth-strength-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.auth-strength-label {
+  font-size: .52rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.auth-strength-label.very-weak  { color: #ef4444; }
+.auth-strength-label.weak       { color: #f97316; }
+.auth-strength-label.fair       { color: #eab308; }
+.auth-strength-label.strong     { color: #22c55e; }
+.auth-strength-label.very-strong{ color: #16a34a; }
+ 
+/* Password rules checklist */
+.auth-pwd-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.auth-pwd-rule {
+  font-size: .5rem;
+  letter-spacing: .06em;
+  color: rgba(96,70,59,0.4);
+  transition: color .25s;
+}

@@ -406,10 +406,13 @@ function Nav({ navigate = () => {}, cart = [] }) {
                   <span className="nav-user-dropdown-email">{user.email}</span>
                 </div>
                 <div className="nav-user-dropdown-divider" />
-                <button className="nav-user-dropdown-item"
-                  onClick={() => { setUserMenu(false); navigate("admin"); }}>
-                  Dashboard
-                </button>
+                {/* Dashboard — admin only */}
+                {user.role === "admin" && (
+                  <button className="nav-user-dropdown-item"
+                    onClick={() => { setUserMenu(false); navigate("admin"); }}>
+                    Dashboard
+                  </button>
+                )}
                 <button className="nav-user-dropdown-item"
                   onClick={() => { setUserMenu(false); navigate("orders"); }}>
                   My Orders
@@ -759,7 +762,7 @@ function Journey() {
    BUG FIX: null-check on ref.current in tilt handlers
    BUG FIX: transition reset no longer fights sr-scale
 ───────────────────────────────────────── */
-function ProductCard({ tag, origin, name, desc, price, img, index = 0, addToCart }) {
+function ProductCard({ _id, tag, origin, name, desc, price, img, index = 0, addToCart }) {
   const ref = useRef(null);
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
   const [added, setAdded] = useState(false);
@@ -781,7 +784,8 @@ function ProductCard({ tag, origin, name, desc, price, img, index = 0, addToCart
   };
 
   const handleAdd = () => {
-    addToCart && addToCart({ tag, origin, name, desc, price, img });
+    /* Pass _id so CheckoutPage can send productId to the orders API */
+    addToCart && addToCart({ _id, tag, origin, name, desc, price, img });
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };
@@ -833,6 +837,28 @@ function Collections({ addToCart, navigate }) {
       .finally(() => setLoading(false));
   }, []);
 
+  // NEW: Observer specifically for the products
+  useEffect(() => {
+    if (products.length > 0) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add("vis");
+            }
+          });
+        },
+        { threshold: 0.1 }
+      );
+
+      // Select cards inside the collections grid
+      const cards = document.querySelectorAll("#collections .sr-scale");
+      cards.forEach((el) => io.observe(el));
+
+      return () => io.disconnect();
+    }
+  }, [products]);
+
   return (
     <section id="collections">
       <SectionHeader eyebrow="The Collection">
@@ -866,6 +892,7 @@ function Collections({ addToCart, navigate }) {
           {products.map((p, i) => (
             <ProductCard
               key={p._id}
+              _id={p._id}
               tag={p.tag}
               origin={p.origin}
               name={p.name}
@@ -1144,6 +1171,396 @@ function Footer({ navigate = () => {} }) {
 }
 
 /* ─────────────────────────────────────────
+   ORDERS PAGE — logged-in user's order history
+───────────────────────────────────────── */
+const ORDER_STATUS_COLOR = {
+  placed: "#8b6f47", confirmed: "#2563eb", processing: "#d97706",
+  shipped: "#7c3aed", delivered: "#16a34a", cancelled: "#dc2626",
+  pending: "#6b7280", paid: "#16a34a", failed: "#dc2626", cod: "#8b6f47",
+};
+const DELIVERY_STAGES = ["placed", "confirmed", "processing", "shipped", "delivered"];
+const STAGE_LABELS    = ["Placed", "Confirmed", "Processing", "Shipped", "Delivered"];
+
+function OrderCard({ o }) {
+  const [expanded, setExpanded] = useState(false);
+  const isCancelled    = o.status === "cancelled";
+  const currentStageIdx = DELIVERY_STAGES.indexOf(o.status); // -1 if cancelled
+
+  return (
+    <div style={{
+      background: "var(--white)",
+      boxShadow: "0 1px 12px rgba(0,0,0,0.06)",
+      overflow: "hidden",
+    }}>
+
+      {/* ── Clickable summary row ── */}
+      <div
+        onClick={() => setExpanded((v) => !v)}
+        style={{ padding: "1.6rem 2rem", cursor: "pointer" }}
+      >
+        {/* Top strip: thumbnails + meta + total */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "1.4rem", flexWrap: "wrap" }}>
+
+          {/* Product thumbnails */}
+          <div style={{ display: "flex", gap: ".5rem", flexShrink: 0 }}>
+            {o.items?.slice(0, 3).map((item, idx) => (
+              <div key={idx} style={{ position: "relative" }}>
+                <img
+                  src={item.img} alt={item.name}
+                  style={{ width: "68px", height: "68px", objectFit: "cover", display: "block" }}
+                />
+                {item.qty > 1 && (
+                  <span style={{
+                    position: "absolute", bottom: "3px", right: "3px",
+                    background: "rgba(0,0,0,0.62)", color: "#fff",
+                    fontSize: ".36rem", letterSpacing: ".06em",
+                    padding: "1px 5px",
+                  }}>×{item.qty}</span>
+                )}
+              </div>
+            ))}
+            {o.items?.length > 3 && (
+              <div style={{
+                width: "68px", height: "68px",
+                background: "var(--paper)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: ".5rem", color: "var(--muted)", letterSpacing: ".08em",
+              }}>
+                +{o.items.length - 3}
+              </div>
+            )}
+          </div>
+
+          {/* Order meta */}
+          <div style={{ flex: 1, minWidth: "160px" }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: ".9rem",
+              flexWrap: "wrap", marginBottom: ".45rem",
+            }}>
+              <span style={{
+                fontFamily: "var(--ff-mono)", fontSize: ".78rem",
+                color: "var(--brown)", fontWeight: 700,
+              }}>#{o.orderNumber}</span>
+              <span style={{ fontSize: ".44rem", letterSpacing: ".14em", color: "var(--muted)" }}>
+                {new Date(o.createdAt).toLocaleDateString("en-IN", {
+                  day: "numeric", month: "short", year: "numeric",
+                })}
+              </span>
+              <span style={{
+                padding: ".18rem .7rem",
+                background: ORDER_STATUS_COLOR[o.status] || "#6b7280",
+                color: "#fff", fontSize: ".4rem",
+                letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 600,
+              }}>{o.status}</span>
+            </div>
+            {/* Item name list */}
+            <p style={{
+              margin: 0, fontSize: ".52rem", color: "var(--muted)",
+              letterSpacing: ".03em", lineHeight: 1.65,
+            }}>
+              {o.items?.map((i) => `${i.name}${i.qty > 1 ? ` ×${i.qty}` : ""}`).join(" · ")}
+            </p>
+          </div>
+
+          {/* Total + expand cue */}
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <span style={{
+              fontFamily: "var(--ff-curs)", fontSize: "1.5rem",
+              color: "var(--brown)", display: "block", lineHeight: 1.1,
+            }}>₹{o.total.toLocaleString("en-IN")}</span>
+            <span style={{
+              fontSize: ".38rem", color: "var(--muted)",
+              letterSpacing: ".14em", textTransform: "uppercase",
+            }}>{expanded ? "▲ hide" : "▼ details"}</span>
+          </div>
+        </div>
+
+        {/* ── Delivery stage tracker ── */}
+        <div style={{ marginTop: "1.5rem" }}>
+          {isCancelled ? (
+            <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
+              <span style={{
+                width: "8px", height: "8px", borderRadius: "50%",
+                background: "#dc2626", display: "inline-block", flexShrink: 0,
+              }} />
+              <span style={{
+                fontSize: ".42rem", letterSpacing: ".16em",
+                textTransform: "uppercase", color: "#dc2626", fontWeight: 600,
+              }}>Order Cancelled</span>
+            </div>
+          ) : (
+            <>
+              {/* Track line + dots */}
+              <div style={{ display: "flex", alignItems: "center" }}>
+                {DELIVERY_STAGES.flatMap((stage, idx) => {
+                  const done   = idx <= currentStageIdx;
+                  const active = idx === currentStageIdx;
+                  const dot = (
+                    <div key={`dot-${idx}`} style={{
+                      width:  active ? "13px" : "9px",
+                      height: active ? "13px" : "9px",
+                      borderRadius: "50%", flexShrink: 0,
+                      background: done ? (ORDER_STATUS_COLOR[stage] || "var(--brown)") : "var(--white)",
+                      border: `2px solid ${done ? (ORDER_STATUS_COLOR[stage] || "var(--brown)") : "#d4cfc7"}`,
+                      boxShadow: active
+                        ? `0 0 0 4px ${ORDER_STATUS_COLOR[stage]}28`
+                        : "none",
+                      transition: "all .25s",
+                    }} />
+                  );
+                  const line = idx < DELIVERY_STAGES.length - 1 ? (
+                    <div key={`line-${idx}`} style={{
+                      flex: 1, height: "2px",
+                      background: idx < currentStageIdx ? "var(--brown)" : "#e2ddd6",
+                      transition: "background .25s",
+                    }} />
+                  ) : null;
+                  return line ? [dot, line] : [dot];
+                })}
+              </div>
+              {/* Stage labels */}
+              <div style={{ display: "flex", marginTop: ".45rem" }}>
+                {STAGE_LABELS.map((label, idx) => (
+                  <span key={label} style={{
+                    flex: 1,
+                    fontSize: ".36rem", letterSpacing: ".12em",
+                    textTransform: "uppercase",
+                    color: idx <= currentStageIdx ? "var(--brown)" : "#b8b2a8",
+                    fontWeight: idx === currentStageIdx ? 700 : 400,
+                    textAlign: idx === 0 ? "left"
+                      : idx === STAGE_LABELS.length - 1 ? "right" : "center",
+                  }}>{label}</span>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Expanded detail panel ── */}
+      {expanded && (
+        <div style={{
+          borderTop: "1px solid var(--paper)",
+          padding: "1.8rem 2rem",
+          background: "var(--paper)",
+        }}>
+
+          {/* Items list */}
+          <div style={{ marginBottom: "1.8rem" }}>
+            <span style={{
+              fontSize: ".43rem", letterSpacing: ".22em",
+              textTransform: "uppercase", color: "var(--muted)",
+              display: "block", marginBottom: ".9rem",
+            }}>Items Ordered</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: ".6rem" }}>
+              {o.items?.map((item, idx) => (
+                <div key={idx} style={{
+                  display: "flex", alignItems: "center", gap: "1.1rem",
+                  background: "var(--white)", padding: ".9rem 1.1rem",
+                }}>
+                  <img src={item.img} alt={item.name} style={{
+                    width: "58px", height: "58px",
+                    objectFit: "cover", flexShrink: 0,
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <span style={{
+                      fontSize: ".62rem", color: "var(--brown)",
+                      fontWeight: 600, letterSpacing: ".03em", display: "block",
+                    }}>{item.name}</span>
+                    {item.origin && (
+                      <span style={{
+                        fontSize: ".44rem", color: "var(--muted)",
+                        letterSpacing: ".1em", textTransform: "uppercase",
+                      }}>{item.origin}</span>
+                    )}
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <span style={{
+                      fontSize: ".5rem", color: "var(--muted)",
+                      display: "block", marginBottom: ".15rem",
+                    }}>× {item.qty}</span>
+                    <span style={{
+                      fontFamily: "var(--ff-mono)", fontSize: ".62rem",
+                      color: "var(--brown)", fontWeight: 600,
+                    }}>₹{(item.price * item.qty).toLocaleString("en-IN")}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bill + Delivery — two columns on wider screens */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "2rem",
+          }}>
+
+            {/* Bill summary */}
+            <div>
+              <span style={{
+                fontSize: ".43rem", letterSpacing: ".22em",
+                textTransform: "uppercase", color: "var(--muted)",
+                display: "block", marginBottom: ".7rem",
+              }}>Bill Summary</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: ".38rem" }}>
+                {[
+                  ["Subtotal",   `₹${o.subtotal?.toLocaleString("en-IN") ?? "—"}`],
+                  ["Shipping",   o.shipping === 0 ? "FREE" : `₹${o.shipping}`],
+                  ["GST (18%)", `₹${o.gst?.toLocaleString("en-IN") ?? "—"}`],
+                  ...(o.codFee > 0 ? [["COD Fee", `₹${o.codFee}`]] : []),
+                ].map(([k, v]) => (
+                  <div key={k} style={{
+                    display: "flex", justifyContent: "space-between",
+                    fontSize: ".52rem", color: "var(--muted)",
+                  }}>
+                    <span>{k}</span><span style={{ fontFamily: "var(--ff-mono)" }}>{v}</span>
+                  </div>
+                ))}
+                <div style={{
+                  display: "flex", justifyContent: "space-between",
+                  fontSize: ".62rem", color: "var(--brown)", fontWeight: 700,
+                  borderTop: "1px solid #ddd9d0",
+                  paddingTop: ".45rem", marginTop: ".2rem",
+                }}>
+                  <span>Total</span>
+                  <span style={{ fontFamily: "var(--ff-mono)" }}>
+                    ₹{o.total?.toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Delivery address */}
+            {o.delivery && (
+              <div>
+                <span style={{
+                  fontSize: ".43rem", letterSpacing: ".22em",
+                  textTransform: "uppercase", color: "var(--muted)",
+                  display: "block", marginBottom: ".7rem",
+                }}>Deliver To</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: ".28rem" }}>
+                  <span style={{
+                    fontSize: ".6rem", color: "var(--brown)", fontWeight: 600,
+                  }}>{o.delivery.firstName} {o.delivery.lastName}</span>
+                  <span style={{ fontSize: ".5rem", color: "var(--muted)" }}>
+                    {o.delivery.address}{o.delivery.apt ? `, ${o.delivery.apt}` : ""}
+                  </span>
+                  <span style={{ fontSize: ".5rem", color: "var(--muted)" }}>
+                    {o.delivery.city}, {o.delivery.state} – {o.delivery.pincode}
+                  </span>
+                  <span style={{ fontSize: ".5rem", color: "var(--muted)", marginTop: ".1rem" }}>
+                    📞 {o.delivery.phone}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Payment badges */}
+          <div style={{
+            marginTop: "1.4rem", display: "flex",
+            alignItems: "center", gap: ".7rem", flexWrap: "wrap",
+          }}>
+            <span style={{
+              fontSize: ".43rem", letterSpacing: ".18em",
+              textTransform: "uppercase", color: "var(--muted)",
+            }}>Payment</span>
+            {[o.paymentMethod, o.paymentStatus || "pending"].filter(Boolean).map((s) => (
+              <span key={s} style={{
+                padding: ".2rem .75rem",
+                background: ORDER_STATUS_COLOR[s] || "#6b7280",
+                color: "#fff", fontSize: ".4rem",
+                letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 600,
+              }}>{s}</span>
+            ))}
+          </div>
+
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrdersPage({ navigate }) {
+  const { user } = useAuth();
+  const [orders,  setOrders]  = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+
+  useEffect(() => {
+    if (!user) { navigate("auth"); return; }
+    api.orders.mine()
+      .then((d) => setOrders(d.orders))
+      .catch(() => setError("Could not load orders. Please try again."))
+      .finally(() => setLoading(false));
+  }, [user, navigate]);
+
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--paper)", fontFamily: "var(--ff-mono)" }}>
+      {/* Minimal header */}
+      <div style={{
+        background: "var(--brown)", padding: "1.2rem 3rem",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        position: "sticky", top: 0, zIndex: 100,
+        boxShadow: "0 2px 20px rgba(0,0,0,0.25)",
+      }}>
+        <button onClick={() => navigate("home")} style={{
+          background: "none", border: "none", color: "rgba(255,255,255,0.5)",
+          fontFamily: "var(--ff-mono)", fontSize: ".54rem", letterSpacing: ".2em",
+          textTransform: "uppercase", cursor: "pointer", display: "flex",
+          alignItems: "center", gap: ".5rem",
+        }}>← Back</button>
+        <span className="nav-logo-text">COC<span className="nav-logo-curs">O</span>PI</span>
+        <span style={{ fontSize: ".52rem", letterSpacing: ".15em",
+          color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>My Orders</span>
+      </div>
+
+      <div style={{ maxWidth: "860px", margin: "0 auto", padding: "3rem 2rem" }}>
+        <h1 style={{
+          fontFamily: "var(--ff-mono)", fontSize: "clamp(1.4rem,3vw,2rem)",
+          color: "var(--brown)", marginBottom: "2rem", letterSpacing: ".04em",
+        }}>
+          Order History
+        </h1>
+
+        {loading && (
+          <p style={{ fontSize: ".62rem", color: "var(--muted)", letterSpacing: ".12em" }}>
+            Loading your orders…
+          </p>
+        )}
+
+        {error && (
+          <p style={{ fontSize: ".62rem", color: "#dc2626", letterSpacing: ".08em" }}>
+            {error}
+          </p>
+        )}
+
+        {!loading && !error && orders.length === 0 && (
+          <div style={{ textAlign: "center", padding: "4rem 2rem" }}>
+            <p style={{ fontSize: ".65rem", color: "var(--muted)",
+              letterSpacing: ".08em", marginBottom: "1.5rem" }}>
+              You haven't placed any orders yet.
+            </p>
+            <button onClick={() => navigate("home")} style={{
+              padding: ".8rem 2.4rem", background: "var(--brown)", color: "#fff",
+              border: "none", fontFamily: "var(--ff-mono)", fontSize: ".6rem",
+              letterSpacing: ".18em", textTransform: "uppercase", cursor: "pointer",
+            }}>Shop Now</button>
+          </div>
+        )}
+
+        {!loading && !error && orders.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
+            {orders.map((o) => <OrderCard key={o._id} o={o} />)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
    MAIN CONTENT
 ───────────────────────────────────────── */
 function MainContent({ navigate, cart, addToCart, removeFromCart, updateQty }) {
@@ -1186,26 +1603,34 @@ function MainContent({ navigate, cart, addToCart, removeFromCart, updateQty }) {
    APP ROOT — page router + global cart state
 ───────────────────────────────────────── */
 export default function App() {
-  const [ready,    setReady]   = useState(false);
-  const [page,     setPage]    = useState("home"); // "home" | "auth" | "cart" | "checkout"
-  const [cart,     setCart]    = useState([]);
+  const [ready, setReady] = useState(false);
+  const [page,  setPage]  = useState("home");
   const { user } = useAuth();
 
-useEffect(() => {
-  if (user?.role === "admin") {
-    setPage("admin");
-  }
-}, [user]);
+  /* ── Cart — persisted to localStorage so it survives refresh ── */
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem("cocopi_cart");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  /* Keep localStorage in sync whenever cart changes */
+  useEffect(() => {
+    try {
+      localStorage.setItem("cocopi_cart", JSON.stringify(cart));
+    } catch {}
+  }, [cart]);
 
   const handleDone = useCallback(() => setReady(true), []);
 
-  /* Scroll to top on every page change */
   const navigate = useCallback((target) => {
     setPage(target);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  /* Cart helpers — passed as props to any component that needs them */
   const addToCart = useCallback((product) => {
     setCart((prev) => {
       const exists = prev.find((i) => i.name === product.name);
@@ -1214,7 +1639,6 @@ useEffect(() => {
           i.name === product.name ? { ...i, qty: i.qty + 1 } : i
         );
       }
-      /* Store _id as productId for the orders API */
       return [...prev, { ...product, productId: product._id, qty: 1 }];
     });
   }, []);
@@ -1231,7 +1655,9 @@ useEffect(() => {
     );
   }, []);
 
-  /* Lazy-load page components only when needed */
+  /* Clear cart after successful order */
+  const clearCart = useCallback(() => setCart([]), []);
+
   const renderPage = () => {
     if (!ready) return null;
     switch (page) {
@@ -1247,9 +1673,27 @@ useEffect(() => {
           />
         );
       case "checkout":
-        return <CheckoutPage cart={cart} navigate={navigate} />;
-        case "admin":
-  return <AdminPage navigate={navigate} />;
+        return (
+          <CheckoutPage
+            cart={cart}
+            navigate={navigate}
+            clearCart={clearCart}
+          />
+        );
+      case "orders":
+        return <OrdersPage navigate={navigate} />;
+      case "admin":
+        /* Hard guard — only admins can see the dashboard */
+        if (!user || user.role !== "admin") return (
+          <MainContent
+            navigate={navigate}
+            cart={cart}
+            addToCart={addToCart}
+            removeFromCart={removeFromCart}
+            updateQty={updateQty}
+          />
+        );
+        return <AdminPage navigate={navigate} />;
       default:
         return (
           <MainContent

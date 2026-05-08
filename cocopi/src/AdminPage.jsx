@@ -133,7 +133,7 @@ function OverviewTab() {
 }
 
 /* ─────────────────────────────────────────
-   ORDERS TAB
+   ORDERS TAB — full order details
 ───────────────────────────────────────── */
 const ORDER_STATUSES = ["all","placed","confirmed","processing","shipped","delivered","cancelled"];
 const NEXT_STATUS = {
@@ -141,10 +141,175 @@ const NEXT_STATUS = {
   processing: "shipped", shipped: "delivered",
 };
 
+function OrderRow({ order, onAdvance, onCancel, updating }) {
+  const [expanded, setExpanded] = useState(false);
+  const o = order;
+
+  return (
+    <>
+      <tr
+        key={o._id}
+        className={expanded ? "adm-row-expanded" : ""}
+        style={{ cursor: "pointer" }}
+        onClick={() => setExpanded(!expanded)}
+      >
+        <td className="adm-mono adm-bold">
+          <span className="adm-expand-toggle">{expanded ? "▾" : "▸"}</span>
+          {o.orderNumber}
+        </td>
+        <td>
+          <span className="adm-bold">{o.user?.name || "Guest"}</span>
+          <br/><span className="adm-sub">{o.user?.email || "—"}</span>
+        </td>
+        <td>
+          {/* Item thumbnails summary */}
+          <div className="adm-items-thumb-row">
+            {o.items?.slice(0, 3).map((item, idx) => (
+              <img
+                key={idx}
+                src={item.img}
+                alt={item.name}
+                className="adm-item-thumb"
+                title={`${item.name} × ${item.qty}`}
+              />
+            ))}
+            {o.items?.length > 3 && (
+              <span className="adm-items-more">+{o.items.length - 3}</span>
+            )}
+          </div>
+          <span className="adm-sub">{o.items?.length} item(s)</span>
+        </td>
+        <td className="adm-mono adm-bold">₹{o.total.toLocaleString("en-IN")}</td>
+        <td><StatusBadge status={o.paymentMethod} /></td>
+        <td><StatusBadge status={o.status} /></td>
+        <td className="adm-sub">
+          {new Date(o.createdAt).toLocaleDateString("en-IN", {
+            day: "numeric", month: "short", year: "numeric",
+          })}
+        </td>
+        <td onClick={(e) => e.stopPropagation()}>
+          <div className="adm-action-row">
+            {NEXT_STATUS[o.status] && (
+              <button
+                className="adm-action-btn adm-action-advance"
+                onClick={() => onAdvance(o)}
+                disabled={updating === o._id}
+                title={`Mark as ${NEXT_STATUS[o.status]}`}
+              >
+                {updating === o._id ? "…" : `→ ${NEXT_STATUS[o.status]}`}
+              </button>
+            )}
+            {o.status !== "cancelled" && o.status !== "delivered" && (
+              <button
+                className="adm-action-btn adm-action-cancel"
+                onClick={() => onCancel(o)}
+                disabled={updating === o._id}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
+
+      {/* ── Expanded detail row ── */}
+      {expanded && (
+        <tr className="adm-detail-row">
+          <td colSpan={8} style={{ padding: 0 }}>
+            <div className="adm-detail-panel">
+
+              {/* Items */}
+              <div className="adm-detail-section">
+                <h4 className="adm-detail-heading">Items Ordered</h4>
+                <div className="adm-detail-items">
+                  {o.items?.map((item, idx) => (
+                    <div key={idx} className="adm-detail-item">
+                      <img src={item.img} alt={item.name} className="adm-detail-item-img" />
+                      <div className="adm-detail-item-info">
+                        <span className="adm-detail-item-name">{item.name}</span>
+                        <span className="adm-detail-item-origin">{item.origin}</span>
+                      </div>
+                      <div className="adm-detail-item-nums">
+                        <span className="adm-detail-item-qty">× {item.qty}</span>
+                        <span className="adm-detail-item-price">
+                          ₹{(item.price * item.qty).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Price breakdown */}
+                <div className="adm-detail-totals">
+                  <div className="adm-detail-total-line">
+                    <span>Subtotal</span>
+                    <span>₹{o.subtotal?.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="adm-detail-total-line">
+                    <span>Shipping</span>
+                    <span>{o.shipping === 0 ? "FREE" : `₹${o.shipping}`}</span>
+                  </div>
+                  <div className="adm-detail-total-line">
+                    <span>GST (18%)</span>
+                    <span>₹{o.gst?.toLocaleString("en-IN")}</span>
+                  </div>
+                  {o.codFee > 0 && (
+                    <div className="adm-detail-total-line">
+                      <span>COD Fee</span><span>₹{o.codFee}</span>
+                    </div>
+                  )}
+                  <div className="adm-detail-total-line adm-detail-grand-total">
+                    <span>Total</span>
+                    <span>₹{o.total?.toLocaleString("en-IN")}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Delivery address */}
+              <div className="adm-detail-section">
+                <h4 className="adm-detail-heading">Deliver To</h4>
+                {o.delivery ? (
+                  <div className="adm-detail-address">
+                    <span className="adm-detail-address-name">
+                      {o.delivery.firstName} {o.delivery.lastName}
+                    </span>
+                    <span>{o.delivery.address}
+                      {o.delivery.apt ? `, ${o.delivery.apt}` : ""}
+                    </span>
+                    <span>
+                      {o.delivery.city}, {o.delivery.state} – {o.delivery.pincode}
+                    </span>
+                    <span className="adm-sub">📞 {o.delivery.phone}</span>
+                    <span className="adm-sub">✉️ {o.delivery.email}</span>
+                  </div>
+                ) : (
+                  <span className="adm-sub">No address recorded</span>
+                )}
+              </div>
+
+              {/* Payment */}
+              <div className="adm-detail-section">
+                <h4 className="adm-detail-heading">Payment</h4>
+                <div className="adm-detail-address">
+                  <StatusBadge status={o.paymentMethod} />
+                  <span className="adm-sub" style={{ marginTop: ".3rem" }}>
+                    Status: <StatusBadge status={o.paymentStatus || "pending"} />
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 function OrdersTab() {
-  const [orders,  setOrders]  = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter,  setFilter]  = useState("all");
+  const [orders,   setOrders]   = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [filter,   setFilter]   = useState("all");
   const [updating, setUpdating] = useState(null);
 
   const load = useCallback((status) => {
@@ -181,7 +346,6 @@ function OrdersTab() {
 
   return (
     <div className="adm-tab-content">
-      {/* Status filter tabs */}
       <div className="adm-filter-row">
         {ORDER_STATUSES.map((s) => (
           <button
@@ -198,6 +362,7 @@ function OrdersTab() {
         <div className="adm-loading">Loading orders…</div>
       ) : (
         <div className="adm-table-wrap">
+          <p className="adm-table-hint">Click any row to see full order details</p>
           <table className="adm-table">
             <thead>
               <tr>
@@ -211,44 +376,13 @@ function OrdersTab() {
                 <tr><td colSpan={8} className="adm-empty">No orders found.</td></tr>
               )}
               {orders.map((o) => (
-                <tr key={o._id}>
-                  <td className="adm-mono adm-bold">{o.orderNumber}</td>
-                  <td>
-                    {o.user?.name || "Guest"}
-                    <br/><span className="adm-sub">{o.user?.email || "—"}</span>
-                  </td>
-                  <td className="adm-sub">{o.items?.length} item(s)</td>
-                  <td className="adm-mono">₹{o.total.toLocaleString("en-IN")}</td>
-                  <td><StatusBadge status={o.paymentMethod} /></td>
-                  <td><StatusBadge status={o.status} /></td>
-                  <td className="adm-sub">
-                    {new Date(o.createdAt).toLocaleDateString("en-IN")}
-                  </td>
-                  <td>
-                    <div className="adm-action-row">
-                      {NEXT_STATUS[o.status] && (
-                        <button
-                          className="adm-action-btn adm-action-advance"
-                          onClick={() => advance(o)}
-                          disabled={updating === o._id}
-                          title={`Mark as ${NEXT_STATUS[o.status]}`}
-                        >
-                          {updating === o._id ? "…" : `→ ${NEXT_STATUS[o.status]}`}
-                        </button>
-                      )}
-                      {o.status !== "cancelled" && o.status !== "delivered" && (
-                        <button
-                          className="adm-action-btn adm-action-cancel"
-                          onClick={() => cancel(o)}
-                          disabled={updating === o._id}
-                          title="Cancel order"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                <OrderRow
+                  key={o._id}
+                  order={o}
+                  onAdvance={advance}
+                  onCancel={cancel}
+                  updating={updating}
+                />
               ))}
             </tbody>
           </table>

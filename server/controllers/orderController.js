@@ -103,8 +103,8 @@ exports.placeOrder = async (req, res) => {
 exports.getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user._id })
-      .sort({ createdAt: -1 }) // Newest first
-      .select("orderNumber total status paymentMethod createdAt items"); // Only what the UI needs
+      .sort({ createdAt: -1 }); // Newest first
+      // .select("orderNumber total status paymentMethod createdAt items"); Only what the UI needs
 
     res.status(200).json({ success: true, count: orders.length, orders });
   } catch (err) {

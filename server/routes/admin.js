@@ -20,7 +20,6 @@ const { protect, adminOnly } = require("../middleware/protect");
 
 /* ─ Seed admin (dev only, no auth needed since no admin exists yet) ─ */
 router.post("/seed-admin", seedAdmin);
-router.get("/ping", (req, res) => res.json({ success: true, message: "admin router alive" }));
 
 /* ─ All routes below require admin JWT ─ */
 router.use(protect, adminOnly);
