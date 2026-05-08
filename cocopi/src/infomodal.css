@@ -1,0 +1,195 @@
+/* ═══════════════════════════════════════════
+   INFO MODAL
+   Append this block to App.css
+═══════════════════════════════════════════ */
+
+/* ─ Overlay ─ */
+.im-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 10, 6, 0.72);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: im-fade-in .25s ease forwards;
+}
+
+/* ─ Panel ─ */
+.im-panel {
+  background: var(--paper);
+  max-width: 640px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 3rem 3rem 2.4rem;
+  animation: im-slide-up .32s cubic-bezier(.22,1,.36,1) forwards;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(96,70,59,0.2) transparent;
+}
+.im-panel::-webkit-scrollbar { width: 4px; }
+.im-panel::-webkit-scrollbar-thumb { background: rgba(96,70,59,0.2); border-radius: 2px; }
+
+/* ─ Close button ─ */
+.im-close {
+  position: absolute;
+  top: 1.4rem;
+  right: 1.4rem;
+  background: none;
+  border: none;
+  color: rgba(96,70,59,0.35);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  transition: color .25s, background .25s;
+}
+.im-close:hover {
+  color: var(--brown);
+  background: rgba(96,70,59,0.06);
+}
+
+/* ─ Header ─ */
+.im-header {
+  margin-bottom: 1.6rem;
+}
+
+.im-eyebrow {
+  display: block;
+  font-family: var(--ff-mono);
+  font-size: .48rem;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: .65rem;
+}
+
+.im-heading {
+  font-family: var(--ff-mono);
+  font-size: clamp(1.3rem, 3vw, 1.9rem);
+  color: var(--brown);
+  letter-spacing: .02em;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+/* ─ Divider ─ */
+.im-divider {
+  height: 1px;
+  background: linear-gradient(to right, var(--gold), transparent);
+  margin-bottom: 1.8rem;
+  opacity: 0.4;
+}
+
+/* ─ Body blocks ─ */
+.im-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  margin-bottom: 2rem;
+}
+
+.im-block-label {
+  display: block;
+  font-family: var(--ff-mono);
+  font-size: .48rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .45rem;
+}
+
+.im-block-text {
+  font-family: var(--ff-mono);
+  font-size: .66rem;
+  color: rgba(96,70,59,0.82);
+  line-height: 1.9;
+  letter-spacing: .025em;
+}
+
+/* ─ Pull quote ─ */
+.im-pullquote {
+  font-family: var(--ff-curs);
+  font-size: clamp(1.2rem, 2.5vw, 1.55rem);
+  color: var(--brown);
+  line-height: 1.5;
+  border-left: 2px solid var(--gold);
+  padding-left: 1.2rem;
+  margin: 0 0 2rem;
+  font-style: normal;
+}
+
+/* ─ Footer row ─ */
+.im-footer {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid rgba(96,70,59,0.1);
+}
+
+.im-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: .75rem 1.8rem;
+  background: var(--brown);
+  color: #fff;
+  font-family: var(--ff-mono);
+  font-size: .58rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background .3s;
+  position: relative;
+  overflow: hidden;
+}
+.im-cta::before {
+  content: 'Yes! Let\'s connect';
+  position: absolute; inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: black;
+  background: var(--gold);
+  transform: translateX(-102%);
+  transition: transform .38s ease;
+  z-index: 0;
+}
+.im-cta span, .im-cta { position: relative; z-index: 1; }
+.im-cta:hover::before { transform: translateX(0); }
+
+.im-close-text {
+  background: none;
+  border: none;
+  font-family: var(--ff-mono);
+  font-size: .52rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  padding: .75rem 0;
+  transition: color .25s;
+}
+.im-close-text:hover { color: var(--brown); }
+
+/* ─ Animations ─ */
+@keyframes im-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes im-slide-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ─ Responsive ─ */
+@media (max-width: 600px) {
+  .im-panel { padding: 2rem 1.5rem 1.8rem; }
+  .im-pullquote { font-size: 1.1rem; }
+}

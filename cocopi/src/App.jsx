@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
+import "./infomodal.css";
 import BannerImg from "./Banner.png";
 import PackageImg from "./Package.png";
 import AuthPage from "./AuthPage";
@@ -762,10 +763,11 @@ function Journey() {
    BUG FIX: null-check on ref.current in tilt handlers
    BUG FIX: transition reset no longer fights sr-scale
 ───────────────────────────────────────── */
-function ProductCard({ _id, tag, origin, name, desc, price, img, index = 0, addToCart }) {
+function ProductCard({ _id, tag, origin, name, desc, price, img, index = 0, addToCart, navigate }) {
   const ref = useRef(null);
   const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
   const [added, setAdded] = useState(false);
+  const { user } = useAuth();
 
   const onMove = (e) => {
     if (!ref.current || isTouchDevice) return;
@@ -784,6 +786,10 @@ function ProductCard({ _id, tag, origin, name, desc, price, img, index = 0, addT
   };
 
   const handleAdd = () => {
+    if (!user) {
+      navigate && navigate("auth");
+      return;
+    }
     /* Pass _id so CheckoutPage can send productId to the orders API */
     addToCart && addToCart({ _id, tag, origin, name, desc, price, img });
     setAdded(true);
@@ -994,7 +1000,7 @@ const TESTIMONIALS = [
   },
   {
     quote: "Cocopi redefines what artisan chocolate can be. Pure, obsessive, and utterly transcendent.",
-    author: "— Condé Nast Traveller, 2024",
+    author: "— Condé Nast Traveller, 2026",
   },
   {
     quote: "Each bar tells the story of its origin with startling clarity, beauty, and precision.",
@@ -1116,9 +1122,167 @@ function Newsletter() {
 }
 
 /* ─────────────────────────────────────────
+   INFO MODAL SYSTEM
+   Popup templates for Our Story, Sourcing,
+   Sustainability, Press. Accessible, scroll-
+   locked, closes on overlay click or Escape.
+───────────────────────────────────────── */
+const MODAL_CONTENT = {
+  "Our Story": {
+    eyebrow: "Est. 1897",
+    heading: "Where cacao becomes craft",
+    body: [
+      {
+        label: "The beginning",
+        text: "Cocopi was born in the foothills of Coorg, where a young confectioner named Unknown Human first encountered a freshly harvested cacao pod in 1897. Struck by the raw, floral complexity he found inside, he spent seven years refining a process that would honour that complexity rather than mask it. What started as a small atelier supplying local tea houses became one of India's most quietly obsessed chocolate makers.",
+      },
+      {
+        label: "The philosophy",
+        text: "We believe chocolate should taste of where it came from. Not of vanilla extract, not of artificial emulsifiers — of the specific soil, the particular altitude, the hands that harvested it. Every origin we work with has a name, a region, a farmer. We visit them. We eat with them. We adjust our recipes to follow what the cacao gives us that season, not the other way around.",
+      },
+      {
+        label: "Today",
+        text: "Our atelier in Bengaluru produces fewer than 12,000 bars a month — intentionally. Small batches mean full attention. Each one is tempered by hand, wrapped in our signature kraft packaging, and dispatched within three days of setting. We have no interest in growing beyond what we can make beautifully.",
+      },
+    ],
+    pullquote: "\"We don't make chocolate at scale. We make it at attention.\"",
+  },
+  "Sourcing": {
+    eyebrow: "Single Origin",
+    heading: "Traceability from pod to bar",
+    body: [
+      {
+        label: "Our origins",
+        text: "We source exclusively from four origins: the Ambanja region of Madagascar for our flagship 70% dark, the Hacienda Limon in Ecuador for our milk chocolate base, the Yen Bai highlands of Vietnam for our earthy 85%, and the Ashanti region of Ghana for our drinking chocolate. Each origin is contracted directly with farming cooperatives — no commodity brokers, no blind auctions.",
+      },
+      {
+        label: "Direct relationships",
+        text: "Every cooperative we work with receives a price floor 34% above the Fairtrade minimum, regardless of market fluctuations. We visit each farm at minimum once per harvest season. Our sourcing lead, Priya Krishnamurthy, has been in relationship with our Madagascan cooperative since 2011. These aren't supplier relationships. They are partnerships.",
+      },
+      {
+        label: "Fermentation & drying",
+        text: "We specify our fermentation protocols and drying times directly with each farm. Cacao that doesn't meet our moisture and fermentation benchmarks is purchased anyway — because we believe in absorbing the risk of a difficult season, not passing it to the farmer. It goes into our drinking chocolate blend rather than being wasted.",
+      },
+    ],
+    pullquote: "\"We know the name of the farmer behind every bar.\"",
+  },
+  "Sustainability": {
+    eyebrow: "Our Commitment",
+    heading: "Less harm. More intention.",
+    body: [
+      {
+        label: "Packaging",
+        text: "Our kraft outer wrap is FSC-certified and home-compostable within 26 weeks. The inner foil lining — the hardest part of chocolate packaging to make sustainable — has been replaced with a plant-based cellulose film since March 2023. Our mailer boxes are 100% recycled board with no plastic tape. We're not perfect, but we document every material decision publicly on our sustainability log.",
+      },
+      {
+        label: "Carbon",
+        text: "We offset 110% of our Scope 1 and 2 emissions through verified reforestation projects in the Western Ghats, within 400km of our atelier. We publish our annual carbon footprint audit every January. Our Scope 3 emissions (shipping, farm inputs) are harder — we're honest that we haven't solved them yet, and we're actively working with logistics partners on lower-emissions last-mile delivery.",
+      },
+      {
+        label: "Community",
+        text: "1.5% of every sale goes directly to the Cacao Education Fund, which we co-founded in 2019 to provide agricultural training and secondary school scholarships for children in our farming communities. To date the fund has supported 214 scholarship recipients across Madagascar, Ecuador, and Ghana.",
+      },
+    ],
+    pullquote: "\"Sustainability isn't a campaign. It's the price of being serious.\"",
+  },
+  "Press": {
+    eyebrow: "In the press",
+    heading: "What people are saying",
+    body: [
+      {
+        label: "Vogue India, March 2026",
+        text: "\"Cocopi is doing something genuinely rare in Indian chocolate — making bars that require attention. The Madagascar 70% has the same effect as a very good natural wine: you keep finding new things in it.\" — Ishaan Mehta, Food & Living Editor",
+      },
+      {
+        label: "The Hindu Weekend, November 2026",
+        text: "\"In a market flooded with imported European bars and their Indian imitators, Cocopi stands apart by going upstream. The result is chocolate that tastes of a place, a season, a decision — not just of sugar and fat.\" — Ananya Subramaniam",
+      },
+      {
+        label: "Condé Nast Traveller India, December 2026",
+        text: "\"One of the ten best food souvenirs to bring home from Bengaluru. The packaging alone is worth the journey, but the chocolate inside it justifies the obsession.\" — Best of India Awards 2023",
+      },
+      {
+        label: "Press enquiries",
+        text: "For interviews, review samples, photography access, or editorial partnerships, please write to us at hello@cocopi.com with 'Press' in the subject line. We respond to all press enquiries within 48 hours.",
+      },
+    ],
+    pullquote: "\"Quietly, Cocopi has become one of India's finest food stories.\"",
+  },
+};
+
+function InfoModal({ slug, onClose }) {
+  const content = MODAL_CONTENT[slug];
+
+  /* Close on Escape */
+  useState(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  });
+
+  /* Lock body scroll */
+  useState(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  });
+
+  if (!content) return null;
+
+  return (
+    <div className="im-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label={slug}>
+      <div className="im-panel" onClick={(e) => e.stopPropagation()}>
+        {/* Close button */}
+        <button className="im-close" onClick={onClose} aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+
+        {/* Header */}
+        <div className="im-header">
+          <span className="im-eyebrow">{content.eyebrow}</span>
+          <h2 className="im-heading">{content.heading}</h2>
+        </div>
+
+        {/* Divider */}
+        <div className="im-divider" />
+
+        {/* Body blocks */}
+        <div className="im-body">
+          {content.body.map((block) => (
+            <div key={block.label} className="im-block">
+              <span className="im-block-label">{block.label}</span>
+              <p className="im-block-text">{block.text}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Pull quote */}
+        <blockquote className="im-pullquote">{content.pullquote}</blockquote>
+
+        {/* CTA */}
+        <div className="im-footer">
+          <a
+            href="mailto:hello@cocopi.com?subject=Hello from Cocopi.com"
+            className="im-cta"
+          >
+            Get in touch →
+          </a>
+          <button className="im-close-text" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
    FOOTER
    BUG FIX: f-brand-tagline now has correct CSS class
    ENHANCEMENT: SVG cacao pod in brand section
+   ENHANCEMENT: Atelier links open InfoModal;
+                Contact Us opens mailto Gmail link
 ───────────────────────────────────────── */
 const FOOTER_COLS = [
   {
@@ -1132,43 +1296,67 @@ const FOOTER_COLS = [
 ];
 
 function Footer({ navigate = () => {} }) {
+  const [activeModal, setActiveModal] = useState(null);
+
+  const handleAtelier = (link) => {
+    if (link === "Contact Us") {
+      window.location.href =
+        "mailto:hello@cocopi.com?subject=Hello from Cocopi.com&body=Hi Cocopi team,%0D%0A%0D%0A";
+      return;
+    }
+    if (MODAL_CONTENT[link]) {
+      setActiveModal(link);
+    }
+  };
+
   return (
-    <footer>
-      <div className="footer-top">
-        <div className="f-brand">
-          <div className="f-brand-logo-wrap">
-            <CacaoPodLogo size={36} color="var(--gold)" />
-            <span className="f-brand-logo">COCOPI</span>
+    <>
+      {activeModal && (
+        <InfoModal slug={activeModal} onClose={() => setActiveModal(null)} />
+      )}
+
+      <footer>
+        <div className="footer-top">
+          <div className="f-brand">
+            <div className="f-brand-logo-wrap">
+              <CacaoPodLogo size={36} color="var(--gold)" />
+              <span className="f-brand-logo">COCOPI</span>
+            </div>
+            <p className="f-brand-desc">
+              Artisan chocolate makers since 1897. Every bar is a testament to
+              the extraordinary journey from cacao pod to finished confection.
+            </p>
+            <span className="f-brand-sub">Artisan Chocolate Atelier</span>
           </div>
-          <p className="f-brand-desc">
-            Artisan chocolate makers since 1897. Every bar is a testament to
-            the extraordinary journey from cacao pod to finished confection.
-          </p>
-          {/* BUG FIX: was .f-brand-tagline with no CSS — now uses correct class */}
-          <span className="f-brand-sub">Artisan Chocolate Atelier</span>
+
+          {FOOTER_COLS.map((col) => (
+            <div key={col.title} className="f-col">
+              <span className="f-col-title">{col.title}</span>
+              <ul>
+                {col.links.map((l) => (
+                  <li key={l}>
+                    <button
+                      className="f-col-link"
+                      onClick={() => col.title === "Atelier" ? handleAtelier(l) : undefined}
+                    >
+                      {l}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        {FOOTER_COLS.map((col) => (
-          <div key={col.title} className="f-col">
-            <span className="f-col-title">{col.title}</span>
-            <ul>
-              {col.links.map((l) => (
-                <li key={l}>
-                  <button className="f-col-link">{l}</button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-
-      <div className="footer-bottom">
-        <p>© 2025 COCOPI. All rights reserved.</p>
-        <p>CRAFTED WITH OBSESSION</p>
-      </div>
-    </footer>
+        <div className="footer-bottom">
+          <p>© 2026 COCOPI. All rights reserved.</p>
+          <p>CRAFTED WITH OBSESSION</p>
+        </div>
+      </footer>
+    </>
   );
 }
+
 
 /* ─────────────────────────────────────────
    ORDERS PAGE — logged-in user's order history
@@ -1623,6 +1811,14 @@ export default function App() {
       localStorage.setItem("cocopi_cart", JSON.stringify(cart));
     } catch {}
   }, [cart]);
+
+  /* Clear cart when user logs out */
+  useEffect(() => {
+    if (!user) {
+      setCart([]);
+      try { localStorage.removeItem("cocopi_cart"); } catch {}
+    }
+  }, [user]);
 
   const handleDone = useCallback(() => setReady(true), []);
 

@@ -41,9 +41,13 @@
 .co-brand {
   font-family: var(--ff-mono);
   font-size: 1rem;
-  letter-spacing: .52em;
+  letter-spacing: .20em;
   color: #fff;
   text-transform: uppercase;
+}
+.itagold{
+  color: var(--gold);
+  font-style: italic;
 }
 
 .co-header-secure {
@@ -900,4 +904,114 @@
   .co-body { padding: 1.5rem 1rem; }
   .co-page-header { padding: 0.9rem 1rem; }
   .co-brand { font-size: 0.8rem; letter-spacing: .38em; }
+}
+
+/* ═══════════════════════════════════════════
+   ENHANCED VALIDATION STYLES
+   Read-only locked fields, hints, COD selected
+═══════════════════════════════════════════ */
+
+/* ─ Read-only (account-locked) fields ─ */
+.co-field-readonly .co-input {
+  background: rgba(96,70,59,0.04);
+  border-color: rgba(96,70,59,0.1);
+  color: var(--brown);
+  cursor: not-allowed;
+  opacity: 0.85;
+  caret-color: transparent;
+}
+.co-field-readonly .co-input:focus {
+  border-color: rgba(96,70,59,0.1);
+  background: rgba(96,70,59,0.04);
+  outline: none;
+  box-shadow: none;
+}
+.co-field-readonly .co-label {
+  color: var(--muted);
+}
+
+/* Lock badge next to label */
+.co-readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.55rem;
+  font-size: .44rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(243,198,35,0.1);
+  border: 1px solid rgba(243,198,35,0.25);
+  padding: 0.12rem 0.45rem;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+/* ─ Field hints (below input, above error) ─ */
+.co-field-hint {
+  font-size: .46rem;
+  letter-spacing: .1em;
+  color: rgba(96,70,59,0.38);
+  animation: co-fade-up .25s ease forwards;
+}
+
+/* ─ API / order error ─ */
+.co-api-error {
+  font-size: .58rem;
+  letter-spacing: .08em;
+  color: var(--red, #db1a1a);
+  background: rgba(219,26,26,0.05);
+  border-left: 2px solid var(--red, #db1a1a);
+  padding: 0.7rem 1rem;
+  margin-top: 0.4rem;
+  animation: co-fade-up .3s ease forwards;
+}
+
+/* ─ COD selected card (for PaymentStep) ─ */
+.co-cod-selected {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem;
+  background: var(--paper);
+  border: 1.5px solid var(--brown);
+  border-radius: 2px;
+}
+
+.co-cod-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.co-cod-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.co-cod-title {
+  font-size: .68rem;
+  letter-spacing: .08em;
+  color: var(--brown);
+  font-weight: 600;
+}
+
+.co-cod-sub {
+  font-size: .54rem;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+
+.co-cod-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--brown);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
 }
